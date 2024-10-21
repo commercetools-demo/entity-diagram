@@ -1,17 +1,7 @@
 import React, { useEffect } from 'react';
 import go from 'gojs/release/go';
 import styled from 'styled-components';
-import { GoEntity } from '../../hooks/use-connector/types';
-import {
-  generateUUID,
-  LinkData,
-  NodeData,
-  useChangeTracker,
-} from './useTrackChanges';
-type Props = {
-  data: GoEntity[];
-  links?: LinkData[];
-};
+import { useChange } from '../../providers/changes';
 
 const StyledDiv = styled.div`
   background-color: white;
@@ -20,12 +10,17 @@ const StyledDiv = styled.div`
   height: 700px;
 `;
 
-const Canvas = (props: Props) => {
-  const { linkData, trackLinkChange, nodeData, trackNodeChange } =
-    useChangeTracker({
-      linkDataArray: props.links as LinkData[],
-      nodeDataArray: props.data as NodeData[],
-    });
+export const generateUUID = () => {
+  const now = new Date();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (now.getTime() + Math.random() * 16) % 16 | 0;
+    now.setMilliseconds(now.getMilliseconds() + 1);
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+};
+
+const Canvas = () => {
+  const { linkData, trackLinkChange, nodeData, trackNodeChange } = useChange();
 
   function init() {
     let myDiagram = new go.Diagram('myDiagramDiv', {
@@ -49,10 +44,10 @@ const Canvas = (props: Props) => {
     // Track changes to links (add, remove, text changes)
     myDiagram.addDiagramListener('LinkDrawn', (e) => {
       const link = e.subject;
-      const linkKey = generateUUID(); // Generate a new UUID for the link
+
       trackLinkChange({
         type: 'linkAdded',
-        key: linkKey,
+        key: link.key,
         fromNode: link.fromNode.key,
         toNode: link.toNode.key,
         text: link.data.text,
@@ -62,12 +57,11 @@ const Canvas = (props: Props) => {
 
     myDiagram.addDiagramListener('LinkRelinked', (e) => {
       const link = e.subject;
-      console.log('LinkRelinked', e);
-
       trackLinkChange({
         type: 'linkModified',
         oldFromNode: e.oldFromNode ? e.oldFromNode.key : null,
         oldToNode: e.oldToNode ? e.oldToNode.key : null,
+        key: link.key,
         newFromNode: link.fromNode.key,
         newToNode: link.toNode.key,
         text: link.data.text,
@@ -80,6 +74,7 @@ const Canvas = (props: Props) => {
         if (part instanceof go.Link) {
           trackLinkChange({
             type: 'linkRemoved',
+            key: part.data?.key,
             fromNode: part.fromNode.key,
             toNode: part.toNode.key,
           });
@@ -102,6 +97,11 @@ const Canvas = (props: Props) => {
         link: '#dcb263',
         linkOver: '#cbd5e1',
         div: '#fff',
+        primary: '#f7f9fc',
+        green: '#62bd8e',
+        blue: '#3999bf',
+        purple: '#7f36b0',
+        red: '#c41000'
       },
     });
 
@@ -115,6 +115,12 @@ const Canvas = (props: Props) => {
         link: '#fdb71c',
         linkOver: '#475569',
         div: '#141e37',
+        primary: '#4a4a4a',
+        green: '#429e6f',
+        blue: '#3f9fc6',
+        purple: '#9951c9',
+        red: '#ff4d3d'
+
       },
     });
 
@@ -139,7 +145,7 @@ const Canvas = (props: Props) => {
 
     function textStyle(textblock) {
       textblock
-        .set({ font: 'bold 11pt Figtree, sans-serif' })
+        .set({  margin: 6, font: 'bold 11pt Figtree, sans-serif' })
         .theme('stroke', 'text');
     }
 
@@ -269,14 +275,6 @@ const Canvas = (props: Props) => {
               margin: new go.Margin(3, 24, 3, 2),
               font: 'bold 15px sans-serif',
             }).theme('stroke', 'text'),
-            go.GraphObject.build(
-              'PanelExpanderButton',
-              {
-                row: 0,
-                alignment: go.Spot.Right,
-              },
-              'NonInherited'
-            ).theme('ButtonIcon.stroke', 'text'),
             new go.Panel('Vertical', {
               row: 2,
               name: 'NonInherited',
@@ -378,6 +376,7 @@ const Canvas = (props: Props) => {
           textEdited: (tb, oldValue, newValue) => {
             trackLinkChange({
               type: 'linkTextChanged',
+              key: tb.part?.key,
               fromNode: tb.part?.fromNode.key,
               toNode: tb.part?.toNode.key,
               oldText: oldValue,
@@ -398,6 +397,7 @@ const Canvas = (props: Props) => {
           textEdited: (tb, oldValue, newValue) => {
             trackLinkChange({
               type: 'linkTextChanged',
+              key: tb.part?.key,
               fromNode: tb.part?.fromNode.key,
               toNode: tb.part?.toNode.key,
               oldText: oldValue,
@@ -407,6 +407,8 @@ const Canvas = (props: Props) => {
           },
         }).bindTwoWay('text', 'toText')
       );
+
+    
 
     // define the Node template, representing an entity
     // myDiagram.nodeTemplate = new go.Node('Auto', {
@@ -421,8 +423,11 @@ const Canvas = (props: Props) => {
     myDiagram.model = new go.GraphLinksModel({
       copiesArrays: true,
       copiesArrayObjects: true,
+      copiesKeys: true,
       nodeDataArray: nodeData,
-      linkDataArray: linkData,
+      makeUniqueLinkKeyFunction: generateUUID,
+      linkKeyProperty: 'key',
+      linkDataArray: JSON.parse(JSON.stringify(linkData)),
     });
   }
 

@@ -12,21 +12,30 @@ const getRandomColor = (): string => {
   return '#' + Math.floor(Math.random() * 16777215).toString(16);
 };
 
-const getRandomPosition = (x?: number, y?: number): go.Point => {
-  // Adjust these values based on your diagram size
-  const maxX = 1000;
-  const maxY = 1000;
-  return new go.Point(
-    x ?? Math.floor(Math.random() * maxX),
-    y ?? Math.floor(Math.random() * maxY)
-  );
-};
+const PRODUCT_INHERITED_ATTRIBUTES = [
+  {
+    name: 'id',
+    iskey: true,
+    figure: 'Diamond',
+  },
+  {
+    name: 'name',
+    iskey: false,
+    figure: 'Rectangle',
+  },
+  {
+    name: 'description',
+    iskey: false,
+    figure: 'Rectangle',
+  },
+];
 
 // Helper function to create a GoEntity
 const createGoEntity = (
   key: string,
   name: string,
-  items: { name: string; iskey: boolean }[]
+  items: { name: string; iskey: boolean }[],
+  type: 'CustomObject' | 'CustomType' | 'ProductType'
 ): GoEntity => {
   return {
     key,
@@ -35,8 +44,17 @@ const createGoEntity = (
       name: item.name,
       iskey: item.iskey,
       figure: 'Rectangle',
-      color: getRandomColor(),
+      color:
+        type === 'ProductType'
+          ? 'blue'
+          : type === 'CustomType'
+          ? 'red'
+          : 'green',
+      
     })),
+    ...(type === 'ProductType' && {
+      inheritedItems: PRODUCT_INHERITED_ATTRIBUTES,
+    }),
   };
 };
 
@@ -49,7 +67,7 @@ export const mapSchemaTypeToGoEntities = (
       name: attr.name,
       iskey: attr.name === 'id', // Assuming 'id' is always the key
     }));
-    return createGoEntity(schema.key, schema.key, items);
+    return createGoEntity(schema.key, schema.key, items, 'CustomObject');
   });
 };
 
@@ -62,7 +80,12 @@ export const mapProductTypeToGoEntities = (
       name: attr.name,
       iskey: attr.name === 'id', // Assuming 'id' is always the key
     }));
-    return createGoEntity(productType.key, productType.name, items);
+    return createGoEntity(
+      productType.name ?? productType.key,
+      productType.key,
+      items,
+      'ProductType'
+    );
   });
 };
 
@@ -75,6 +98,6 @@ export const mapTypeToGoEntities = (
       name: field.name,
       iskey: field.name === 'id', // Assuming 'id' is always the key
     }));
-    return createGoEntity(type.key, type.name, items);
+    return createGoEntity(type.key, type.name, items, 'CustomType');
   });
 };

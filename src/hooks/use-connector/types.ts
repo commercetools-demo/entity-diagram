@@ -1,4 +1,3 @@
-import { LinkData } from '../../components/diagram/useTrackChanges';
 
 export interface PagedQueryResponse<T> {
   limit: number;
@@ -91,3 +90,48 @@ export type GoEntity = {
     color: string;
   }[];
 };
+
+
+
+export interface LinkData {
+  key: string;
+  from: string;
+  to: string;
+  text?: string;
+  toText?: string;
+}
+
+export interface NodeData extends GoEntity {
+  position: { x: number; y: number };
+}
+
+export type ChangeEvent =
+  | {
+      type: 'nodePositionChanged';
+      nodeKey: string;
+      newPosition: { x: number; y: number };
+    }
+  | {
+      type: 'linkAdded';
+      key: string;
+      fromNode: string;
+      toNode: string;
+      text?: string;
+      toText?: string;
+    }
+  | {
+      type: 'linkModified';
+      key: string;
+      newFromNode: string;
+      newToNode: string;
+      text?: string;
+      toText?: string;
+    }
+  | { type: 'linkRemoved'; key: string }
+  | {
+      type: 'linkTextChanged';
+      key: string;
+      oldText: string;
+      newText: string;
+      isFromText: boolean;
+    };
