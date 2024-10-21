@@ -1,4 +1,4 @@
-import { go } from 'gojs';
+import * as go from 'gojs';
 import {
   PagedQueryResponse,
   SchemaTypeResponse,
@@ -12,13 +12,13 @@ const getRandomColor = (): string => {
   return '#' + Math.floor(Math.random() * 16777215).toString(16);
 };
 
-const getRandomPosition = (): go.Point => {
+const getRandomPosition = (x?: number, y?: number): go.Point => {
   // Adjust these values based on your diagram size
   const maxX = 1000;
   const maxY = 1000;
   return new go.Point(
-    Math.floor(Math.random() * maxX),
-    Math.floor(Math.random() * maxY)
+    x ?? Math.floor(Math.random() * maxX),
+    y ?? Math.floor(Math.random() * maxY)
   );
 };
 
@@ -30,7 +30,7 @@ const createGoEntity = (
 ): GoEntity => {
   return {
     key,
-    location: getRandomPosition(), // You may want to set a specific location or randomize it
+    location: new go.Point(1,300), // You may want to set a specific location or randomize it
     items: items.map((item) => ({
       name: item.name,
       iskey: item.iskey,
