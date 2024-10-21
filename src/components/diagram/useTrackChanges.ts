@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { GoEntity } from '../../hooks/use-connector/types';
+import { useConnector } from '../../hooks/use-connector';
 
 // Function to generate a UUID based on current date
 export const generateUUID = () => {
@@ -19,13 +20,8 @@ export interface LinkData {
   toText?: string;
 }
 
-interface NodeData extends GoEntity {
+export interface NodeData extends GoEntity {
   position: { x: number; y: number };
-}
-
-interface DiagramData {
-  linkDataArray: LinkData[];
-  nodeDataArray: NodeData[];
 }
 
 type ChangeEvent =
@@ -59,32 +55,28 @@ type ChangeEvent =
       isFromText: boolean;
     };
 
-export const useChangeTracker = (initialData: DiagramData) => {
-  const [diagramData, setDiagramData] = useState<DiagramData>(initialData);
+export const useChangeTracker = ({
+  linkDataArray,
+  nodeDataArray,
+}: {
+  linkDataArray: LinkData[];
+  nodeDataArray: NodeData[];
+}) => {
+  const [linkData, setLinkData] = useState<LinkData[]>(linkDataArray);
+  const [nodeData, setNodeData] = useState<NodeData[]>(nodeDataArray);
 
-  const trackChange = useCallback((change: ChangeEvent) => {
-    setDiagramData((prevData) => {
-      const newData = JSON.parse(JSON.stringify(prevData)) as DiagramData; // Deep copy to ensure immutability
+  const { saveLinkData } = useConnector();
+
+  const trackLinkChange = useCallback((change: ChangeEvent) => {
+    setLinkData((prevData) => {
+      let newData = JSON.parse(JSON.stringify(prevData)) as LinkData[]; // Deep copy to ensure immutability
 
       switch (change.type) {
-        case 'nodePositionChanged':
-          const nodeIndex = newData.nodeDataArray.findIndex(
-            (node) => node.key === change.nodeKey
-          );
-          console.log(change);
-
-          if (nodeIndex !== -1) {
-            newData.nodeDataArray[nodeIndex].position = change.newPosition;
-          }
-          break;
-
         case 'linkAdded':
           // Check if the link already exists before adding
-          const linkExists = newData.linkDataArray.some(
-            (link) => link.key === change.key
-          );
+          const linkExists = newData.some((link) => link.key === change.key);
           if (!linkExists) {
-            newData.linkDataArray.push({
+            newData.push({
               key: change.key,
               from: change.fromNode,
               to: change.toNode,
@@ -95,12 +87,12 @@ export const useChangeTracker = (initialData: DiagramData) => {
           break;
 
         case 'linkModified':
-          const linkIndex = newData.linkDataArray.findIndex(
+          const linkIndex = newData.findIndex(
             (link) => link.key === change.key
           );
           if (linkIndex !== -1) {
-            newData.linkDataArray[linkIndex] = {
-              ...newData.linkDataArray[linkIndex],
+            newData[linkIndex] = {
+              ...newData[linkIndex],
               from: change.newFromNode,
               to: change.newToNode,
               text: change.text,
@@ -110,21 +102,41 @@ export const useChangeTracker = (initialData: DiagramData) => {
           break;
 
         case 'linkRemoved':
-          newData.linkDataArray = newData.linkDataArray.filter(
-            (link) => link.key !== change.key
-          );
+          newData = newData.filter((link) => link.key !== change.key);
           break;
 
         case 'linkTextChanged':
-          const textLinkIndex = newData.linkDataArray.findIndex(
+          const textLinkIndex = newData.findIndex(
             (link) => link.key === change.key
           );
           if (textLinkIndex !== -1) {
             if (change.isFromText) {
-              newData.linkDataArray[textLinkIndex].text = change.newText;
+              newData[textLinkIndex].text = change.newText;
             } else {
-              newData.linkDataArray[textLinkIndex].toText = change.newText;
+              newData[textLinkIndex].toText = change.newText;
             }
+          }
+          break;
+      }
+
+      saveLinkData(newData);
+
+      return newData;
+    });
+  }, []);
+
+  const trackNodeChange = useCallback((change: ChangeEvent) => {
+    setNodeData((prevData) => {
+      const newData = JSON.parse(JSON.stringify(prevData)) as NodeData[]; // Deep copy to ensure immutability
+
+      switch (change.type) {
+        case 'nodePositionChanged':
+          const nodeIndex = newData.findIndex(
+            (node) => node.key === change.nodeKey
+          );
+
+          if (nodeIndex !== -1) {
+            newData[nodeIndex].position = change.newPosition;
           }
           break;
       }
@@ -133,5 +145,5 @@ export const useChangeTracker = (initialData: DiagramData) => {
     });
   }, []);
 
-  return { diagramData, trackChange };
+  return { trackLinkChange, trackNodeChange, linkData, nodeData };
 };

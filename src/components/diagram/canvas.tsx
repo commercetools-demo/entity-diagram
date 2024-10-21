@@ -2,9 +2,15 @@ import React, { useEffect } from 'react';
 import go from 'gojs/release/go';
 import styled from 'styled-components';
 import { GoEntity } from '../../hooks/use-connector/types';
-import { generateUUID, useChangeTracker } from './useTrackChanges';
+import {
+  generateUUID,
+  LinkData,
+  NodeData,
+  useChangeTracker,
+} from './useTrackChanges';
 type Props = {
   data: GoEntity[];
+  links?: LinkData[];
 };
 
 const StyledDiv = styled.div`
@@ -15,10 +21,11 @@ const StyledDiv = styled.div`
 `;
 
 const Canvas = (props: Props) => {
-  const { diagramData, trackChange } = useChangeTracker({
-    linkDataArray: [],
-    nodeDataArray: props.data as GoEntity[],
-  });
+  const { linkData, trackLinkChange, nodeData, trackNodeChange } =
+    useChangeTracker({
+      linkDataArray: props.links as LinkData[],
+      nodeDataArray: props.data as NodeData[],
+    });
 
   function init() {
     let myDiagram = new go.Diagram('myDiagramDiv', {
@@ -30,7 +37,7 @@ const Canvas = (props: Props) => {
       const selection = e.diagram.selection;
       selection.each((part) => {
         if (part instanceof go.Node) {
-          trackChange({
+          trackNodeChange({
             type: 'nodePositionChanged',
             nodeKey: part.key,
             newPosition: part.location,
@@ -43,7 +50,7 @@ const Canvas = (props: Props) => {
     myDiagram.addDiagramListener('LinkDrawn', (e) => {
       const link = e.subject;
       const linkKey = generateUUID(); // Generate a new UUID for the link
-      trackChange({
+      trackLinkChange({
         type: 'linkAdded',
         key: linkKey,
         fromNode: link.fromNode.key,
@@ -56,8 +63,8 @@ const Canvas = (props: Props) => {
     myDiagram.addDiagramListener('LinkRelinked', (e) => {
       const link = e.subject;
       console.log('LinkRelinked', e);
-      
-      trackChange({
+
+      trackLinkChange({
         type: 'linkModified',
         oldFromNode: e.oldFromNode ? e.oldFromNode.key : null,
         oldToNode: e.oldToNode ? e.oldToNode.key : null,
@@ -71,7 +78,7 @@ const Canvas = (props: Props) => {
     myDiagram.addDiagramListener('SelectionDeleted', (e) => {
       e.subject.each((part) => {
         if (part instanceof go.Link) {
-          trackChange({
+          trackLinkChange({
             type: 'linkRemoved',
             fromNode: part.fromNode.key,
             toNode: part.toNode.key,
@@ -206,7 +213,7 @@ const Canvas = (props: Props) => {
             toSpot: go.Spot.AllSides,
             stroke: '#e8f1ff',
           })
-          
+
             .apply(shapeStyle)
             .theme('fill', 'step'),
           new go.TextBlock({
@@ -369,7 +376,7 @@ const Canvas = (props: Props) => {
           segmentOrientation: go.Orientation.Upright,
           editable: true,
           textEdited: (tb, oldValue, newValue) => {
-            trackChange({
+            trackLinkChange({
               type: 'linkTextChanged',
               fromNode: tb.part?.fromNode.key,
               toNode: tb.part?.toNode.key,
@@ -389,7 +396,7 @@ const Canvas = (props: Props) => {
           segmentOrientation: go.Orientation.Upright,
           editable: true,
           textEdited: (tb, oldValue, newValue) => {
-            trackChange({
+            trackLinkChange({
               type: 'linkTextChanged',
               fromNode: tb.part?.fromNode.key,
               toNode: tb.part?.toNode.key,
@@ -414,8 +421,8 @@ const Canvas = (props: Props) => {
     myDiagram.model = new go.GraphLinksModel({
       copiesArrays: true,
       copiesArrayObjects: true,
-      nodeDataArray: diagramData.nodeDataArray,
-      linkDataArray: diagramData.linkDataArray,
+      nodeDataArray: nodeData,
+      linkDataArray: linkData,
     });
   }
 

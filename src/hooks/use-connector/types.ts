@@ -1,3 +1,5 @@
+import { LinkData } from '../../components/diagram/useTrackChanges';
+
 export interface PagedQueryResponse<T> {
   limit: number;
   offset: number;
@@ -40,6 +42,12 @@ export interface SchemaTypeResponse {
   value: {
     attributes: SchemaAttribute[];
   };
+}
+
+export interface LinkDataResponse {
+  id: string;
+  key: string;
+  value: LinkData[];
 }
 
 export interface TypeAttribute {

@@ -6,6 +6,7 @@ import {
 import { MC_API_PROXY_TARGETS } from '@commercetools-frontend/constants';
 import { useApplicationContext } from '@commercetools-frontend/application-shell-connectors';
 import {
+  LinkDataResponse,
   PagedQueryResponse,
   ProductTypeResponse,
   SchemaTypeResponse,
@@ -17,8 +18,11 @@ import {
   mapSchemaTypeToGoEntities,
   mapTypeToGoEntities,
 } from './mapper';
+import { LinkData } from '../../components/diagram/useTrackChanges';
 
-const CONTAINER = 'mc-custom-object-schema';
+const SCHEMA_CONTAINER = 'mc-custom-object-schema';
+const LINK_DATA_CONTAINER = 'mc-link-data';
+const LINK_DATA_KEY = 'linkDataList';
 
 export const useConnector = () => {
   const context = useApplicationContext((context) => context);
@@ -34,6 +38,10 @@ export const useConnector = () => {
     TSdkAction,
     PagedQueryResponse<TypeResponse>
   >();
+  const dispatchLinkData = useAsyncDispatch<
+    TSdkAction,
+    PagedQueryResponse<LinkDataResponse>
+  >();
 
   const fetchAllSchemas = async (limit: number = 200, page: number = 1) => {
     const offset = (page - 1) * limit;
@@ -42,7 +50,7 @@ export const useConnector = () => {
       actions.get({
         mcApiProxyTarget: MC_API_PROXY_TARGETS.COMMERCETOOLS_PLATFORM,
         uri: buildUrlWithParams(
-          `/${context?.project?.key}/custom-objects/${CONTAINER}`,
+          `/${context?.project?.key}/custom-objects/${SCHEMA_CONTAINER}`,
           {
             ...(limit && { limit: limit.toString() }),
             ...(offset && { offset: offset.toString() }),
@@ -51,6 +59,24 @@ export const useConnector = () => {
       })
     );
     return result;
+  };
+  const fetchLinkData = async (limit: number = 200, page: number = 1) => {
+    const offset = (page - 1) * limit;
+
+    const result = await dispatchLinkData(
+      actions.get({
+        mcApiProxyTarget: MC_API_PROXY_TARGETS.COMMERCETOOLS_PLATFORM,
+        uri: buildUrlWithParams(
+          `/${context?.project?.key}/custom-objects/${LINK_DATA_CONTAINER}`,
+          {
+            ...(limit && { limit: limit.toString() }),
+            ...(offset && { offset: offset.toString() }),
+          }
+        ),
+      })
+    );
+    if (!result || result.count === 0) return [];
+    return result.results[0] || [];
   };
 
   const fetchAllProductTypes = async (
@@ -85,19 +111,36 @@ export const useConnector = () => {
     );
     return result;
   };
+  const saveLinkData = async (linkDataList: LinkData[]) => {
+    const result = await dispatchLinkData(
+      actions.post({
+        mcApiProxyTarget: MC_API_PROXY_TARGETS.COMMERCETOOLS_PLATFORM,
+        uri: buildUrlWithParams(`/${context?.project?.key}/custom-objects`, {}),
+        payload: {
+          container: LINK_DATA_CONTAINER,
+          key: LINK_DATA_KEY,
+          value: linkDataList,
+        },
+      })
+    );
+    return result;
+  };
 
   const fetchAll = async () => {
-    const [schemas, productTypes, types] = await Promise.all([
+    const [schemas, productTypes, types, linkData] = await Promise.all([
       fetchAllSchemas().then((result) => mapSchemaTypeToGoEntities(result)),
       fetchAllProductTypes().then((result) =>
         mapProductTypeToGoEntities(result)
       ),
       fetchAllTypes().then((result) => mapTypeToGoEntities(result)),
+      fetchLinkData().then((result) => result?.value),
     ]);
-    return { schemas, productTypes, types };
+    return { schemas, productTypes, types, linkData };
   };
 
   return {
+    saveLinkData,
     fetchAll,
+    fetchLinkData,
   };
 };

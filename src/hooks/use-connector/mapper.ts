@@ -30,7 +30,7 @@ const createGoEntity = (
 ): GoEntity => {
   return {
     key,
-    location: new go.Point(1,300), // You may want to set a specific location or randomize it
+    location: new go.Point(1, 300), // You may want to set a specific location or randomize it
     items: items.map((item) => ({
       name: item.name,
       iskey: item.iskey,
