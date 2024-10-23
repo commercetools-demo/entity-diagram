@@ -6,7 +6,11 @@ import {
 import { MC_API_PROXY_TARGETS } from '@commercetools-frontend/constants';
 import { useApplicationContext } from '@commercetools-frontend/application-shell-connectors';
 import {
+  CustomObject,
+  LinkData,
   LinkDataResponse,
+  LocationData,
+  LocationDataResponse,
   PagedQueryResponse,
   ProductTypeResponse,
   SchemaTypeResponse,
@@ -18,11 +22,11 @@ import {
   mapSchemaTypeToGoEntities,
   mapTypeToGoEntities,
 } from './mapper';
-import { LinkData } from '../../components/diagram/useTrackChanges';
 
 const SCHEMA_CONTAINER = 'mc-custom-object-schema';
 const LINK_DATA_CONTAINER = 'mc-link-data';
 const LINK_DATA_KEY = 'linkDataList';
+const LOCATION_DATA_KEY = 'locationDataList';
 
 export const useConnector = () => {
   const context = useApplicationContext((context) => context);
@@ -41,6 +45,10 @@ export const useConnector = () => {
   const dispatchLinkData = useAsyncDispatch<
     TSdkAction,
     PagedQueryResponse<LinkDataResponse>
+  >();
+  const dispatchLocationData = useAsyncDispatch<
+    TSdkAction,
+    PagedQueryResponse<LocationDataResponse>
   >();
 
   const fetchAllSchemas = async (limit: number = 200, page: number = 1) => {
@@ -71,12 +79,33 @@ export const useConnector = () => {
           {
             ...(limit && { limit: limit.toString() }),
             ...(offset && { offset: offset.toString() }),
+            where: `key = "${LINK_DATA_KEY}"`,
           }
         ),
       })
     );
-    if (!result || result.count === 0) return [];
-    return result.results[0] || [];
+    if (!result || result.count === 0) return {} as CustomObject<LinkData[]>;
+    return result.results[0] || ({} as CustomObject<LinkData[]>);
+  };
+  const fetchLocationData = async (limit: number = 200, page: number = 1) => {
+    const offset = (page - 1) * limit;
+
+    const result = await dispatchLocationData(
+      actions.get({
+        mcApiProxyTarget: MC_API_PROXY_TARGETS.COMMERCETOOLS_PLATFORM,
+        uri: buildUrlWithParams(
+          `/${context?.project?.key}/custom-objects/${LINK_DATA_CONTAINER}`,
+          {
+            ...(limit && { limit: limit.toString() }),
+            ...(offset && { offset: offset.toString() }),
+            where: `key = "${LOCATION_DATA_KEY}"`,
+          }
+        ),
+      })
+    );
+    if (!result || result.count === 0)
+      return {} as CustomObject<LocationData[]>;
+    return result.results[0] || ({} as CustomObject<LocationData[]>);
   };
 
   const fetchAllProductTypes = async (
@@ -125,21 +154,43 @@ export const useConnector = () => {
     );
     return result;
   };
+  const saveLocationData = async (locationDataList: LocationData[]) => {
+    const result = await dispatchLocationData(
+      actions.post({
+        mcApiProxyTarget: MC_API_PROXY_TARGETS.COMMERCETOOLS_PLATFORM,
+        uri: buildUrlWithParams(`/${context?.project?.key}/custom-objects`, {}),
+        payload: {
+          container: LINK_DATA_CONTAINER,
+          key: LOCATION_DATA_KEY,
+          value: locationDataList,
+        },
+      })
+    );
+    return result;
+  };
 
   const fetchAll = async () => {
+    const locationData = await fetchLocationData().then(
+      (result) => result?.value
+    );
     const [schemas, productTypes, types, linkData] = await Promise.all([
-      fetchAllSchemas().then((result) => mapSchemaTypeToGoEntities(result)),
-      fetchAllProductTypes().then((result) =>
-        mapProductTypeToGoEntities(result)
+      fetchAllSchemas().then((result) =>
+        mapSchemaTypeToGoEntities(result, locationData)
       ),
-      fetchAllTypes().then((result) => mapTypeToGoEntities(result)),
+      fetchAllProductTypes().then((result) =>
+        mapProductTypeToGoEntities(result, locationData)
+      ),
+      fetchAllTypes().then((result) =>
+        mapTypeToGoEntities(result, locationData)
+      ),
       fetchLinkData().then((result) => result?.value),
     ]);
-    return { schemas, productTypes, types, linkData };
+    return { schemas, productTypes, types, linkData, locationData };
   };
 
   return {
     saveLinkData,
+    saveLocationData,
     fetchAll,
     fetchLinkData,
   };

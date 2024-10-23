@@ -28,14 +28,14 @@ const Canvas = () => {
       'themeManager.changesDivBackground': true,
     });
 
-    myDiagram.addDiagramListener('ChangedSelection', (e) => {
+    myDiagram.addDiagramListener('SelectionMoved', (e) => {
       const selection = e.diagram.selection;
       selection.each((part) => {
         if (part instanceof go.Node) {
           trackNodeChange({
             type: 'nodePositionChanged',
             nodeKey: part.key,
-            newPosition: part.location,
+            loc: part.data.loc,
           });
         }
       });
@@ -101,7 +101,7 @@ const Canvas = () => {
         green: '#62bd8e',
         blue: '#3999bf',
         purple: '#7f36b0',
-        red: '#c41000'
+        red: '#c41000',
       },
     });
 
@@ -119,8 +119,7 @@ const Canvas = () => {
         green: '#429e6f',
         blue: '#3f9fc6',
         purple: '#9951c9',
-        red: '#ff4d3d'
-
+        red: '#ff4d3d',
       },
     });
 
@@ -130,7 +129,7 @@ const Canvas = () => {
     function nodeStyle(node) {
       node
         // the Node.location is at the center of each node
-        .set({ locationSpot: go.Spot.Center })
+        // .set({ locationSpot: go.Spot.Center })
         // The Node.location comes from the "loc" property of the node data,
         // converted by the Point.parse static method.
         // If the Node.location is changed, it updates the "loc" property of the node data,
@@ -145,7 +144,7 @@ const Canvas = () => {
 
     function textStyle(textblock) {
       textblock
-        .set({  margin: 6, font: 'bold 11pt Figtree, sans-serif' })
+        .set({ margin: 6, font: 'bold 11pt Figtree, sans-serif' })
         .theme('stroke', 'text');
     }
 
@@ -407,8 +406,6 @@ const Canvas = () => {
           },
         }).bindTwoWay('text', 'toText')
       );
-
-    
 
     // define the Node template, representing an entity
     // myDiagram.nodeTemplate = new go.Node('Auto', {

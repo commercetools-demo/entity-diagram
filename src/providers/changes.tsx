@@ -11,8 +11,10 @@ import {
   ChangeEvent,
   GoEntity,
   LinkData,
+  LocationData,
   NodeData,
 } from '../hooks/use-connector/types';
+import { debounce } from 'lodash';
 
 interface ChangeContextType {
   trackLinkChange: (change: ChangeEvent) => void;
@@ -26,13 +28,23 @@ const ChangeContext = createContext<ChangeContextType | undefined>(undefined);
 export const ChangeProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
-  const { fetchAll, saveLinkData } = useConnector();
+  const { fetchAll, saveLinkData, saveLocationData } = useConnector();
 
   const [data, setData] = useState<GoEntity[]>();
   const [links, setLinks] = useState<LinkData[]>();
+  const [locations, setLocations] = useState<LocationData[]>();
+
+  const debouncedSaveLinkData = useCallback(debounce(saveLinkData, 1000), [
+    saveLinkData,
+  ]);
+  const debouncedSaveLocationData = useCallback(
+    debounce(saveLocationData, 1000),
+    [saveLocationData]
+  );
 
   const trackLinkChange = useCallback(
     (change: ChangeEvent) => {
+      let isChanged = false;
       setLinks((prevData) => {
         let newData = JSON.parse(JSON.stringify(prevData)) as LinkData[]; // Deep copy to ensure immutability
         switch (change.type) {
@@ -47,6 +59,7 @@ export const ChangeProvider: React.FC<{
                 text: change.text,
                 toText: change.toText,
               });
+              isChanged = true;
             }
             break;
 
@@ -62,11 +75,13 @@ export const ChangeProvider: React.FC<{
                 text: change.text,
                 toText: change.toText,
               };
+              isChanged = true;
             }
             break;
 
           case 'linkRemoved':
             newData = newData.filter((link) => link.key !== change.key);
+            isChanged = true;
             break;
 
           case 'linkTextChanged':
@@ -79,8 +94,14 @@ export const ChangeProvider: React.FC<{
               } else {
                 newData[textLinkIndex].toText = change.newText;
               }
+
+              isChanged = true;
             }
             break;
+        }
+
+        if (isChanged) {
+          debouncedSaveLinkData(newData ?? []);
         }
 
         return newData;
@@ -89,41 +110,52 @@ export const ChangeProvider: React.FC<{
     [links]
   );
 
-  const trackNodeChange = useCallback((change: ChangeEvent) => {
-    setData((prevData) => {
-      const newData = JSON.parse(JSON.stringify(prevData)) as NodeData[]; // Deep copy to ensure immutability
+  const trackNodeChange = useCallback(
+    (change: ChangeEvent) => {
+      let isChanged = false;
+      setLocations((prevData) => {
+        const newData = JSON.parse(JSON.stringify(prevData)) as LocationData[]; // Deep copy to ensure immutability
+        console.log('change', change);
 
-      switch (change.type) {
-        case 'nodePositionChanged':
-          const nodeIndex = newData.findIndex(
-            (node) => node.key === change.nodeKey
-          );
+        switch (change.type) {
+          case 'nodePositionChanged':
+            const nodeIndexInData = data?.findIndex(
+              (node) => node.key === change.nodeKey
+            );
+            const nodeIndexInLocations = newData?.findIndex(
+              (node) => node.key === change.nodeKey
+            );
 
-          if (nodeIndex !== -1) {
-            newData[nodeIndex].position = change.newPosition;
-          }
-          break;
-      }
+            if (nodeIndexInLocations !== -1) {
+              newData[nodeIndexInLocations].loc = change.loc;
+              isChanged = true;
+            } else if (nodeIndexInData !== -1) {
+              newData.push({
+                key: change.nodeKey,
+                loc: change.loc,
+              });
+              isChanged = true;
+            }
+            break;
+        }
 
-      return newData;
-    });
-  }, []);
+        if (isChanged) {
+          debouncedSaveLocationData(newData ?? []);
+        }
+        // console.log('newData', newData);
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      saveLinkData(links ?? []);
-    }, 500);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [links]);
+        return newData;
+      });
+    },
+    [data]
+  );
 
   useEffect(() => {
     fetchAll().then((result) => {
-      const { schemas, productTypes, types, linkData } = result;
+      const { schemas, productTypes, types, linkData, locationData } = result;
       setData([...schemas, ...productTypes, ...types]);
       setLinks(linkData ?? []);
+      setLocations(locationData ?? []);
     });
   }, []);
 

@@ -1,10 +1,15 @@
-
 export interface PagedQueryResponse<T> {
   limit: number;
   offset: number;
   count: number;
   total?: number;
   results: T[];
+}
+
+export interface CustomObject<T> {
+  id: string;
+  key: string;
+  value: T;
 }
 
 export interface SchemaAttribute {
@@ -35,19 +40,12 @@ export interface ProductTypeAttribute {
   };
 }
 
-export interface SchemaTypeResponse {
-  id: string;
-  key: string;
-  value: {
-    attributes: SchemaAttribute[];
-  };
-}
+export type SchemaTypeResponse = CustomObject<{
+  attributes: SchemaAttribute[];
+}>;
 
-export interface LinkDataResponse {
-  id: string;
-  key: string;
-  value: LinkData[];
-}
+export interface LinkDataResponse extends CustomObject<LinkData[]> {}
+export type LocationDataResponse = CustomObject<LocationData[]>;
 
 export interface TypeAttribute {
   name: string;
@@ -82,7 +80,7 @@ export interface TypeResponse {
 
 export type GoEntity = {
   key: string;
-  location: go.Point;
+  loc?: string;
   items: {
     name: string;
     iskey: boolean;
@@ -91,14 +89,17 @@ export type GoEntity = {
   }[];
 };
 
-
-
 export interface LinkData {
   key: string;
   from: string;
   to: string;
   text?: string;
   toText?: string;
+}
+
+export interface LocationData {
+  key: string;
+  loc: string;
 }
 
 export interface NodeData extends GoEntity {
@@ -109,7 +110,7 @@ export type ChangeEvent =
   | {
       type: 'nodePositionChanged';
       nodeKey: string;
-      newPosition: { x: number; y: number };
+      loc: string;
     }
   | {
       type: 'linkAdded';

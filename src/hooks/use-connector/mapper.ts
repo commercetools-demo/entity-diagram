@@ -5,6 +5,7 @@ import {
   ProductTypeResponse,
   TypeResponse,
   GoEntity,
+  LocationData,
 } from './types'; // Assuming types are defined in a separate file
 
 // Helper function to generate a random color
@@ -35,11 +36,13 @@ const createGoEntity = (
   key: string,
   name: string,
   items: { name: string; iskey: boolean }[],
-  type: 'CustomObject' | 'CustomType' | 'ProductType'
+  type: 'CustomObject' | 'CustomType' | 'ProductType',
+  location?: string
 ): GoEntity => {
   return {
     key,
-    location: new go.Point(1, 300), // You may want to set a specific location or randomize it
+    ...(location && { loc: location }),
+    // loc: `${100 * (index + 1)} ${10 * (index + 1)}`, // You may want to set a specific location or randomize it
     items: items.map((item) => ({
       name: item.name,
       iskey: item.iskey,
@@ -50,7 +53,6 @@ const createGoEntity = (
           : type === 'CustomType'
           ? 'red'
           : 'green',
-      
     })),
     ...(type === 'ProductType' && {
       inheritedItems: PRODUCT_INHERITED_ATTRIBUTES,
@@ -60,22 +62,30 @@ const createGoEntity = (
 
 // Method to map SchemaTypeResponse to GoEntity[]
 export const mapSchemaTypeToGoEntities = (
-  response: PagedQueryResponse<SchemaTypeResponse>
+  response: PagedQueryResponse<SchemaTypeResponse>,
+  locationData?: LocationData[]
 ): GoEntity[] => {
   return response.results.map((schema) => {
     const items = schema.value.attributes.map((attr) => ({
       name: attr.name,
       iskey: attr.name === 'id', // Assuming 'id' is always the key
     }));
-    return createGoEntity(schema.key, schema.key, items, 'CustomObject');
+    return createGoEntity(
+      schema.key,
+      schema.key,
+      items,
+      'CustomObject',
+      locationData?.find((data) => data.key === schema.key)?.loc
+    );
   });
 };
 
 // Method to map ProductTypeResponse to GoEntity[]
 export const mapProductTypeToGoEntities = (
-  response: PagedQueryResponse<ProductTypeResponse>
+  response: PagedQueryResponse<ProductTypeResponse>,
+  locationData?: LocationData[]
 ): GoEntity[] => {
-  return response.results.map((productType) => {
+  return response.results.map((productType, index) => {
     const items = productType.attributes.map((attr) => ({
       name: attr.name,
       iskey: attr.name === 'id', // Assuming 'id' is always the key
@@ -84,20 +94,30 @@ export const mapProductTypeToGoEntities = (
       productType.name ?? productType.key,
       productType.key,
       items,
-      'ProductType'
+      'ProductType',
+      locationData?.find(
+        (data) => data.key === productType.name ?? productType.key
+      )?.loc
     );
   });
 };
 
 // Method to map TypeResponse to GoEntity[]
 export const mapTypeToGoEntities = (
-  response: PagedQueryResponse<TypeResponse>
+  response: PagedQueryResponse<TypeResponse>,
+  locationData?: LocationData[]
 ): GoEntity[] => {
-  return response.results.map((type) => {
+  return response.results.map((type, index) => {
     const items = type.fieldDefinitions.map((field) => ({
       name: field.name,
       iskey: field.name === 'id', // Assuming 'id' is always the key
     }));
-    return createGoEntity(type.key, type.name, items, 'CustomType');
+    return createGoEntity(
+      type.key,
+      type.name,
+      items,
+      'CustomType',
+      locationData?.find((data) => data.key === type.key)?.loc
+    );
   });
 };
