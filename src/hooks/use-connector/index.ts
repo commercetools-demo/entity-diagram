@@ -24,7 +24,7 @@ import {
 } from './mapper';
 
 const SCHEMA_CONTAINER = 'mc-custom-object-schema';
-const LINK_DATA_CONTAINER = 'mc-link-data';
+const LINK_DATA_CONTAINER = 'mc-entity-data';
 const LINK_DATA_KEY = 'linkDataList';
 const LOCATION_DATA_KEY = 'locationDataList';
 
