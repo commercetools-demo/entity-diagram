@@ -78,7 +78,7 @@ export interface TypeResponse {
   resourceTypeIds: string[];
 }
 
-export type GoEntity = {
+export type NodeEntity = {
   key: string;
   loc?: string;
   items: {
@@ -86,6 +86,9 @@ export type GoEntity = {
     iskey: boolean;
     figure: string;
     color: string;
+  }[];
+  inheritedItems?: {
+    name: string;
   }[];
 };
 
@@ -102,7 +105,7 @@ export interface LocationData {
   loc: string;
 }
 
-export interface NodeData extends GoEntity {
+export interface NodeData extends NodeEntity {
   position: { x: number; y: number };
 }
 
@@ -128,7 +131,7 @@ export type ChangeEvent =
       text?: string;
       toText?: string;
     }
-  | { type: 'linkRemoved'; key: string }
+  | { type: 'linkRemoved'; key: string; fromNode?: string; toNode?: string }
   | {
       type: 'linkTextChanged';
       key: string;

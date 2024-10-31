@@ -4,7 +4,7 @@ import {
   SchemaTypeResponse,
   ProductTypeResponse,
   TypeResponse,
-  GoEntity,
+  NodeEntity,
   LocationData,
 } from './types'; // Assuming types are defined in a separate file
 
@@ -38,7 +38,7 @@ const createGoEntity = (
   items: { name: string; iskey: boolean }[],
   type: 'CustomObject' | 'CustomType' | 'ProductType',
   location?: string
-): GoEntity => {
+): NodeEntity => {
   return {
     key,
     ...(location && { loc: location }),
@@ -64,7 +64,7 @@ const createGoEntity = (
 export const mapSchemaTypeToGoEntities = (
   response: PagedQueryResponse<SchemaTypeResponse>,
   locationData?: LocationData[]
-): GoEntity[] => {
+): NodeEntity[] => {
   return response.results.map((schema) => {
     const items = schema.value.attributes.map((attr) => ({
       name: attr.name,
@@ -84,7 +84,7 @@ export const mapSchemaTypeToGoEntities = (
 export const mapProductTypeToGoEntities = (
   response: PagedQueryResponse<ProductTypeResponse>,
   locationData?: LocationData[]
-): GoEntity[] => {
+): NodeEntity[] => {
   return response.results.map((productType, index) => {
     const items = productType.attributes.map((attr) => ({
       name: attr.name,
@@ -106,7 +106,7 @@ export const mapProductTypeToGoEntities = (
 export const mapTypeToGoEntities = (
   response: PagedQueryResponse<TypeResponse>,
   locationData?: LocationData[]
-): GoEntity[] => {
+): NodeEntity[] => {
   return response.results.map((type, index) => {
     const items = type.fieldDefinitions.map((field) => ({
       name: field.name,
