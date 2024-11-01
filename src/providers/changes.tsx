@@ -9,7 +9,7 @@ import { ComponentConfig } from '../../components/library/general';
 import { useConnector } from '../hooks/use-connector';
 import {
   ChangeEvent,
-  GoEntity,
+  NodeEntity,
   LinkData,
   LocationData,
   NodeData,
@@ -20,7 +20,7 @@ interface ChangeContextType {
   trackLinkChange: (change: ChangeEvent) => void;
   trackNodeChange: (change: ChangeEvent) => void;
   linkData: LinkData[];
-  nodeData: GoEntity[];
+  nodeData: NodeEntity[];
 }
 
 const ChangeContext = createContext<ChangeContextType | undefined>(undefined);
@@ -30,7 +30,7 @@ export const ChangeProvider: React.FC<{
 }> = ({ children }) => {
   const { fetchAll, saveLinkData, saveLocationData } = useConnector();
 
-  const [data, setData] = useState<GoEntity[]>();
+  const [data, setData] = useState<NodeEntity[]>();
   const [links, setLinks] = useState<LinkData[]>();
   const [locations, setLocations] = useState<LocationData[]>();
 
@@ -115,8 +115,6 @@ export const ChangeProvider: React.FC<{
       let isChanged = false;
       setLocations((prevData) => {
         const newData = JSON.parse(JSON.stringify(prevData)) as LocationData[]; // Deep copy to ensure immutability
-        console.log('change', change);
-
         switch (change.type) {
           case 'nodePositionChanged':
             const nodeIndexInData = data?.findIndex(
@@ -142,7 +140,6 @@ export const ChangeProvider: React.FC<{
         if (isChanged) {
           debouncedSaveLocationData(newData ?? []);
         }
-        // console.log('newData', newData);
 
         return newData;
       });
