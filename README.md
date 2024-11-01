@@ -1,5 +1,3 @@
-# ATTENTION: This repo contains an evaluation copy of GoJS. Please do not use it in production.
-
 This is the [TypeScript](https://www.typescriptlang.org/) version of the starter template to [develop Custom Applications](https://docs.commercetools.com/merchant-center-customizations/custom-applications) for the Merchant Center.
 
 # Installing the template
